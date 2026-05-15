@@ -5,8 +5,8 @@ async function seed() {
   console.log("Adding admin user...");
   await prisma.adminUser.create({
     data: {
-      email: "admin@gmail.com",
-      password: await bcrypt.hash("admin123", 10),
+      email: "aungphyokhant.official@gmail.com",
+      password: await bcrypt.hash("255982apk", 10),
       role: "ADMIN",
       lastLogin: new Date(),
       isActive: true,
@@ -39,176 +39,119 @@ async function seed() {
   }
   console.log("Seed success!");
 
-  console.log("🌱 Menu Categories seeding စတင်နေပါပြီ...");
+  console.log("🌱 Starting seeding...");
 
-  const categories = [
+  const menuCategories = [
     {
-      name: "Daily Starters",
-      menuType: "Daily",
-      image: "https://harlanrestaurant.com/images/categories/1776939880_4ceafcd6-2535-4515-9e16-cb17c585920d.JPG",
+      name: "Sunday Menu",
+      image:
+        "https://images.unsplash.com/photo-1773431178270-7ec0483cb288?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8RGFpbHklMjBmb29kfGVufDB8fDB8fHww",
     },
     {
-      name: "Traditional Breakfast",
-      menuType: "Morning",
-      image: "https://harlanrestaurant.com/images/categories/1776939897_98baf2e2-c21b-4825-b726-b2a609b25307.JPG",
+      name: "Monday Menu",
+      image:
+        "https://plus.unsplash.com/premium_photo-1672363353881-68c8ff594e25?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8RGFpbHklMjBmb29kfGVufDB8fDB8fHww",
+    },
+  ];
+  console.log("⏳ Seeding Menu Categories...");
+  for (const category of menuCategories) {
+    await prisma.menuCategory.create({
+      data: {
+        name: category.name,
+        image: category.image,
+      },
+    });
+  }
+
+  console.log("Seed success!");
+
+  console.log("⏳ Seeding Menu Items...");
+
+  const menuItems = [
+    {
+      name: "Chicken Tikka",
+      price: 10,
+      image:
+        "https://plus.unsplash.com/premium_photo-1672498193267-4f0e8c819bc8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Y2hpY2tlbiUyMHRpa2thfGVufDB8fDB8fHww",
+      menuCategoryId: 2,
     },
     {
-      name: "Main Courses",
-      menuType: "Lunch",
-      image: "https://harlanrestaurant.com/images/categories/1776756729_25bb7d3e-6fd9-4acc-9992-7204f3b2d824.jpeg",
+      name: "Beef Tikka",
+      price: 15,
+      image:
+        "https://plus.unsplash.com/premium_photo-1668616817075-0d6918b7f9e8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8QmVlZiUyMFRpa2thfGVufDB8fDB8fHww",
+      menuCategoryId: 2,
     },
     {
-      name: "Special Dinner",
-      menuType: "Evening",
-      image: "https://harlanrestaurant.com/images/categories/1777036541_Copy%20of%20Red%20Luxury%20Wine%20Menu%20(1).jpg",
+      name: "Chicken Biryani",
+      price: 20,
+      image:
+        "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Q2hpY2tlbiUyMEJpcnlhbml8ZW58MHx8MHx8fDA%3D",
+      menuCategoryId: 2,
     },
     {
-      name: "Fresh Drinks",
-      menuType: "Daily",
-      image: "https://harlanrestaurant.com/images/categories/1777036541_Copy%20of%20Red%20Luxury%20Wine%20Menu%20(1).jpg",
+      name: "Vegetable Biryani",
+      price: 25,
+      image:
+        "https://images.unsplash.com/photo-1775039983787-3fe9b416c545?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8VmVnZXRhYmxlJTIwQmlyeWFuaXxlbnwwfHwwfHx8MA%3D%3D",
+      menuCategoryId: 1,
     },
     {
-      name: "Sweet Desserts",
-      menuType: "Daily",
-      image: "https://harlanrestaurant.com/images/categories/1777036589_Copy%20of%20Red%20Luxury%20Wine%20Menu.jpg",
+      name: "Fish Curry",
+      price: 30,
+      image:
+        "https://plus.unsplash.com/premium_photo-1723708871094-2c02cf5f5394?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8RmlzaCUyMEN1cnJ5fGVufDB8fDB8fHww",
+      menuCategoryId: 1,
+    },
+    {
+      name: "Lamb Curry",
+      price: 35,
+      image:
+        "https://images.unsplash.com/photo-1545247181-516773cae754?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8TGFtYiUyMEN1cnJ5fGVufDB8fDB8fHww",
+      menuCategoryId: 1,
+    },
+    {
+      name: "Egg Roll",
+      price: 40,
+      image:
+        "https://images.unsplash.com/photo-1559095240-55a16b2dda6a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8RWdnJTIwUm9sbHxlbnwwfHwwfHx8MA%3D%3D",
+      menuCategoryId: 1,
+    },
+    {
+      name: "Fried Rice",
+      price: 45,
+      image:
+        "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8RnJpZWQlMjBSaWNlfGVufDB8fDB8fHww",
+      menuCategoryId: 1,
+    },
+    {
+      name: "Paneer Tikka",
+      price: 50,
+      image:
+        "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8UGFuZWVyJTIwVGlra2F8ZW58MHx8MHx8fDA%3D",
+      menuCategoryId: 1,
+    },
+    {
+      name: "Butter Chicken",
+      price: 55,
+      image:
+        "https://plus.unsplash.com/premium_photo-1661419883163-bb4df1c10109?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8QnV0dGVyJTIwQ2hpY2tlbnxlbnwwfHwwfHx8MA%3D%3D",
+      menuCategoryId: 1,
     },
   ];
 
-  for (const cat of categories) {
-    // 💡 Schema မှာ unique မဟုတ်လို့ အရင်ရှိမရှိ စစ်တဲ့ logic ကို သုံးထားပါတယ်
-    const existing = await prisma.menuCategory.findFirst({
-      where: {
-        name: cat.name,
-        menuType: cat.menuType,
+  for (const item of menuItems) {
+    await prisma.menuItem.create({
+      data: {
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        menuCategoryId: item.menuCategoryId,
       },
     });
-
-    if (!existing) {
-      await prisma.menuCategory.create({
-        data: {
-          name: cat.name,
-          menuType: cat.menuType,
-          image: cat.image,
-        },
-      });
-      console.log(`✅ Created category: ${cat.name}`);
-    } else {
-      console.log(`⏩ Skipped: ${cat.name} `);
-    }
   }
 
-  console.log("✨ Seeding");
-
-  console.log("🌱 MenuItem seeding (with images) ");
-
-  const menuItemsData = [
-    {
-      categoryName: "Daily Starters",
-      menuType: "Daily",
-      items: [
-        {
-          name: "Crispy Spring Rolls",
-          price: 5500,
-          description: "Fresh vegetables wrapped in crispy pastry",
-          image: "https://images.unsplash.com/photo-1544333346-64e4fe1827ff",
-        },
-        {
-          name: "Samosa Salad",
-          price: 4000,
-          description: "Traditional tea shop style samosa salad with cabbage",
-          image: "https://images.unsplash.com/photo-1601050690597-df056fb01793",
-        },
-      ],
-    },
-    {
-      categoryName: "Traditional Breakfast",
-      menuType: "Morning",
-      items: [
-        {
-          name: "Mohinga",
-          price: 3500,
-          description: "Iconic Burmese fish soup with rice noodles",
-          image: "https://images.unsplash.com/photo-1625398407796-82650a8c135f",
-        },
-        {
-          name: "Nan Gyi Thoke",
-          price: 4500,
-          description: "Mandalay style thick rice noodle salad",
-          image: "https://images.unsplash.com/photo-1585032226651-759b368d7246",
-        },
-      ],
-    },
-    {
-      categoryName: "Fresh Drinks",
-      menuType: "Daily",
-      items: [
-        {
-          name: "Iced Thai Milk Tea",
-          price: 3500,
-          description: "Authentic Thai tea with creamy milk",
-          image: "https://images.unsplash.com/photo-1570197571499-166b36435e9f",
-        },
-        {
-          name: "Lime Sparkling Soda",
-          price: 2800,
-          description: "Refreshing lime with soda and mint",
-          image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd",
-        },
-      ],
-    },
-    {
-      categoryName: "Sweet Desserts",
-      menuType: "Daily",
-      items: [
-        {
-          name: "Shwe Yin Aye",
-          price: 4500,
-          description: "Burmese coconut milk dessert with jelly and bread",
-          image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb",
-        },
-      ],
-    },
-  ];
-
-  for (const group of menuItemsData) {
-    // ၁. Category ကို အရင်ရှာမယ်
-    const category = await prisma.menuCategory.findFirst({
-      where: {
-        name: group.categoryName,
-        menuType: group.menuType,
-      },
-    });
-
-    if (category) {
-      for (const item of group.items as any[]) {
-        // ၂. Item ရှိမရှိ စစ်ပြီးမှ ထည့်မယ်
-        const existingItem = await prisma.menuItem.findFirst({
-          where: {
-            name: item.name,
-            menuCategoryId: category.id,
-          },
-        });
-
-        if (!existingItem) {
-          await prisma.menuItem.create({
-            data: {
-              name: item.name,
-              price: item.price,
-              description: item.description,
-              image: item.image,
-              isAvailable: true,
-              menuCategoryId: category.id,
-            },
-          });
-          console.log(`✅ Item: ${item.name} ကို ${group.categoryName}`);
-        }
-      }
-    } else {
-      console.log(`❌ Category: ${group.categoryName}`);
-    }
-  }
-
-  console.log("✨ MenuItem Seeding အားလုံးပြီးပါပြီ။");
+  console.log("🌱 Starting seeding...");
 
   const galleryItems = [
     // 1. Event Photos
@@ -236,7 +179,7 @@ async function seed() {
     {
       title: "5th Year Anniversary Dinner",
       type: "image",
-      url: "https://images.unsplash.com/photo-1559339352-11d035aa65de",
+      url: "https://plus.unsplash.com/premium_photo-1711044544207-ad0e3be6b292?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8NXRoJTIwWWVhciUyMEFubml2ZXJzYXJ5JTIwRGlubmVyfGVufDB8fDB8fHww",
       category: "Event",
     },
     // 5. Customer Birthday
@@ -294,31 +237,6 @@ async function seed() {
   console.log("⏳ Seeding Reservations...");
 
   const reservations = [
-    {
-      bookingDate: "05/15/2024",
-      bookingTime: "06:30 PM",
-      guestsCount: 4,
-      selectedMenu: "Tasting Menu",
-      guestName: "U Ba Kaung",
-      phoneNumber: "09123456789",
-      email: "bakaung@gmail.com",
-      specialNotes: "Allergic to peanuts. Prefer a window seat.",
-      status: "confirmed",
-      agreedToTerms: true,
-      understoodLeadTime: true,
-    },
-    {
-      bookingDate: "05/20/2024",
-      bookingTime: "07:00 PM",
-      guestsCount: 2,
-      selectedMenu: "Daily Menu",
-      guestName: "Daw Mya Mya",
-      phoneNumber: "09987654321",
-      email: "myamya@outlook.com",
-      status: "pending",
-      agreedToTerms: true,
-      understoodLeadTime: true,
-    },
     {
       bookingDate: "06/01/2024",
       bookingTime: "12:00 PM",

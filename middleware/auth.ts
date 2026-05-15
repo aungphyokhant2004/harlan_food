@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 
 export function auth(req: express.Request, res: express.Response, next: express.NextFunction) {
   // token ကို ယူတာ
-  const token = req.headers.authorization?.split(" ")[1];
+  // 'as string' ကို ထည့်ပေးလိုက်ပါ
+  const token = (req.headers.authorization as string)?.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ message: "access token is required" });

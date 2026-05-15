@@ -1,55 +1,40 @@
 import { prisma } from "../libs/prisma";
 import express from "express";
 import nodemailer from "nodemailer";
-import { auth } from "../middleware/auth";
-import multer from "multer"; // ၁။ multer ကို ပေါင်းထည့်ပါ
+import multer from "multer";
 
 export const router = express.Router();
 
-// multer setup (Memory ထဲမှာ ခေတ္တသိမ်းဆည်းရန်)
+// Multer ကို Memory Storage သုံးရန် Setup လုပ်ခြင်း
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- ၁။ Nodemailer Transporter Setup ---
+// Nodemailer Setup
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "aungphyokhant.official@gmail.com",
-    pass: "noyd epri eofn pizx",
+    pass: "noyd epri eofn pizx", // App Password
   },
 });
 
-// --- ၂။ User: ဘွတ်ကင်တင်သည့် Route (POST) ---
-// upload.single("paymentScreenshot") ကို ဒီနေရာမှာ ထည့်ရပါမယ်
+// --- ၁။ User: Booking တင်ခြင်း (ပုံကို Base64 String အဖြစ်သိမ်းမည်) ---
 router.post("/reservations", upload.single("paymentScreenshot"), async (req, res) => {
   try {
     const { bookingDate, bookingTime, guestsCount, guestName, phoneNumber, email, selectedMenu, specialNotes, agreedToTerms } = req.body;
 
-    // (က) Validation
-    if (!bookingDate || !bookingTime || !guestsCount || !guestName || !phoneNumber || !email) {
-      return res.status(400).json({ message: "လိုအပ်သောအချက်အလက်များ ပြည့်စုံစွာ ဖြည့်ပေးပါ။" });
-    }
-
-    // (ခ) Sunday Check
-    const date = new Date(bookingDate);
-    if (date.getDay() === 0) {
-      return res.status(400).json({ message: "Sunday (တနင်္ဂနွေနေ့) သည် ဆိုင်ပိတ်ရက်ဖြစ်ပါသည်။" });
-    }
-
-    // (ဂ) Time Check
-    const [hours] = bookingTime.split(":").map(Number);
-    if (hours < 5 || hours >= 22) {
-      return res.status(400).json({ message: "ဘွတ်ကင်အချိန်မှာ မနက် ၅ နာရီမှ ည ၁၀ နာရီအတွင်းသာ ဖြစ်ရပါမည်။" });
-    }
-
     const guests = Number(guestsCount);
-    const requireDeposit = guests >= 6;
 
-    // (ဃ) ၆ ယောက်နှင့်အထက်ဖြစ်ပြီး ပုံမပါရင် တားမြစ်ခြင်း
-    if (requireDeposit && !req.file) {
-      return res.status(400).json({ message: "လူဦးရေ ၆ ယောက်နှင့်အထက် ဖြစ်သောကြောင့် ငွေလွှဲမှတ်တမ်း (Screenshot) တင်ပေးရန် လိုအပ်ပါသည်။" });
+    // ပုံကို Base64 ပြောင်းခြင်း
+    let base64Image = null;
+    if (req.file) {
+      base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
     }
 
-    // (င) Database ထဲ သိမ်းဆည်းခြင်း
+    // ဧည့်သည် ၆ ယောက်ထက်ကျော်ပြီး ငွေလွှဲပုံမပါရင် Error ပေးမယ်
+    if (guests >= 6 && !base64Image) {
+      return res.status(400).json({ message: "ဧည့်သည် ၆ ယောက်နှင့်အထက်အတွက် ငွေလွှဲမှတ်တမ်း တင်ပေးရန် လိုအပ်ပါသည်။" });
+    }
+
     const newReservation = await prisma.reservation.create({
       data: {
         bookingDate,
@@ -60,72 +45,117 @@ router.post("/reservations", upload.single("paymentScreenshot"), async (req, res
         email,
         selectedMenu,
         specialNotes,
-        agreedToTerms: agreedToTerms === "true" || agreedToTerms === true,
-        status: requireDeposit ? "awaiting_deposit" : "confirmed",
+        agreedToTerms: String(agreedToTerms) === "true",
+        // ဘယ်နှစ်ယောက်ဖြစ်ဖြစ် အစမှာ pending ပဲထားမယ်
+        status: "pending",
+        paymentScreenshot: base64Image ? String(base64Image) : null,
       },
     });
 
-    // (စ) User ဆီသို့ Email ပို့ခြင်း
-    const mailOptions = {
-      from: '"Harlan Restaurant" <aungphyokhant.official@gmail.com>',
-      to: email,
-      subject: "Harlan Restaurant - Reservation Confirmed",
-      html: `
-        <div style="background-color: #1a1a1a; padding: 40px; color: #ffffff; font-family: sans-serif;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; color: #333333; padding: 30px; border-radius: 8px;">
-            <h2 style="color: #d4af37;">Reservation Received</h2>
-            <p>Mingalaba <strong>${guestName}</strong>,</p>
-            <p>ဘွတ်ကင်တင်ခြင်း အောင်မြင်ပါသည်။ ဆိုင်သို့ ရောက်ရှိလာမည့် အချိန်ကို စောင့်မျှော်နေပါမည်။</p>
-            <hr />
-            <p>📅 Date: ${bookingDate}</p>
-            <p>⏰ Time: ${bookingTime}</p>
-            <p>👥 Guests: ${guestsCount}</p>
-          </div>
-        </div>
-      `,
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-    } catch (mailError) {
-      console.error("❌ Email failed:", mailError);
-    }
-
     return res.status(201).json({
       success: true,
+      message: "ဘွတ်ကင်တင်ခြင်း အောင်မြင်ပါသည်။ Admin မှ အတည်ပြုပေးပါမည်။",
       data: newReservation,
-      paymentRequired: requireDeposit,
-      paymentDetails:
-        requireDeposit ?
-          {
-            message: "လူဦးရေ ၆ ယောက်နှင့်အထက် ဖြစ်သောကြောင့် ၂၀% Deposit ပေးဆောင်ရပါမည်။",
-            kpay: "09123456789 (Aung Phyo Khant)",
-            amount: "20,000 MMK",
-          }
-        : null,
     });
   } catch (error) {
-    console.error("❌ Server Error:", error);
-    return res.status(500).json({ message: "Server Error: ဘွတ်ကင်တင်ရာတွင် အခက်အဲရှိနေပါသည်။" });
+    console.error("Booking Error:", error);
+    return res.status(500).json({ message: "Server Error ဖြစ်နေပါသည်။" });
   }
 });
 
-// --- ၃။ Admin: ဘွတ်ကင်စာရင်းများ ကြည့်ရန် ---
-router.get("/reservations", auth, async (req, res) => {
+// --- ၂။ Admin: ဘွတ်ကင်စာရင်းကြည့်ရန် ---
+router.get("/reservations", async (req, res) => {
   try {
-    const list = await prisma.reservation.findMany({ orderBy: { createdAt: "desc" } });
+    const list = await prisma.reservation.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    // ပုံက String အနေနဲ့ရှိနေပြီးသားမို့လို့ map လုပ်စရာမလိုဘဲ တန်းပို့လို့ရပါတယ်
     return res.json(list);
   } catch (err) {
     return res.status(500).json({ message: "Error fetching data" });
   }
 });
 
-// --- ၄။ Admin: ဘွတ်ကင်ဖျက်ရန် ---
-router.delete("/reservations/:id", auth, async (req, res) => {
+// --- ၃။ Admin: Status Update (Confirm/Reject) ---
+router.patch("/reservations/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updated = await prisma.reservation.update({
+      where: { id: Number(id) },
+      data: { status },
+    });
+
+    if (status === "confirmed") {
+      const mailOptions = {
+        from: '"Harlan Restaurant" <aungphyokhant.official@gmail.com>',
+        to: updated.email,
+        subject: "✨ Reservation Confirmed - Harlan Restaurant",
+        html: `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+      <!-- Header -->
+      <div style="background-color: #000; padding: 20px; text-align: center;">
+        <h1 style="color: #ffc107; margin: 0; letter-spacing: 2px; font-weight: 300;">HARLAN</h1>
+        <p style="color: #ffffff; font-size: 12px; margin-top: 5px; text-transform: uppercase;">Premium Dining Experience</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 40px 30px; background-color: #ffffff;">
+        <h2 style="color: #333; margin-bottom: 20px;">Mingalaba, ${updated.guestName}!</h2>
+        <p style="color: #555; line-height: 1.6; font-size: 16px;">
+          လူကြီးမင်း၏ Reservation ကို အတည်ပြုပြီးကြောင်း ဝမ်းမြောက်စွာ အသိပေးအပ်ပါသည်။ ကျွန်ုပ်တို့ ဆိုင်သို့ လာရောက်ရန် ဖိတ်ခေါ်အပ်ပါသည်။
+        </p>
+
+        <!-- Booking Details Table -->
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 30px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #888; font-size: 14px;">Date:</td>
+              <td style="padding: 8px 0; color: #333; font-weight: bold; text-align: right;">${updated.bookingDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #888; font-size: 14px;">Time:</td>
+              <td style="padding: 8px 0; color: #333; font-weight: bold; text-align: right;">${updated.bookingTime}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #888; font-size: 14px;">Guests:</td>
+              <td style="padding: 8px 0; color: #333; font-weight: bold; text-align: right;">${updated.guestsCount} Persons</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #d9534f; font-size: 13px; font-style: italic;">
+          * သတိပြုရန်- ဘွတ်ကင်အချိန်ထက် ၁၅ မိနစ် နောက်ကျပါက ဘွတ်ကင်ကို အလိုအလျောက် ပယ်ဖျက်သွားမည် ဖြစ်ပါသည်။
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f4f4f4; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+        <p style="color: #888; font-size: 12px; margin: 0;">
+          Harlan Restaurant, Yangon, Myanmar<br>
+          Phone: +95 9 123 456 789
+        </p>
+      </div>
+    </div>
+    `,
+      };
+      await transporter.sendMail(mailOptions);
+    }
+
+    return res.json({ message: "Status updated successfully", data: updated });
+  } catch (err) {
+    return res.status(500).json({ message: "Update failed" });
+  }
+});
+
+// --- ၄။ Admin: Delete ---
+router.delete("/reservations/:id", async (req, res) => {
   try {
     await prisma.reservation.delete({ where: { id: Number(req.params.id) } });
     return res.json({ message: "Deleted successfully" });
   } catch (err) {
-    return res.status(500).json({ message: "Error deleting" });
+    return res.status(500).json({ message: "Delete failed" });
   }
 });

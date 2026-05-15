@@ -14,16 +14,19 @@ datasource db {
 
 
 // 1. Admin Authentication (အသစ်ဖြည့်စွက်ချက်)
+
 model AdminUser {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  password      String    // Hash လုပ်ထားသော Password သာသိမ်းရန်
-  role          AdminRole @default(ADMIN)
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  role             AdminRole @default(ADMIN)
+  isActive         Boolean   @default(true)
+  lastLogin        DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?         // အဆိုပါ ကုဒ် သက်တမ်းကုန်မည့်အချိန်
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
 
   @@map("admin_users")
 }
@@ -34,24 +37,27 @@ enum AdminRole {
 }
 
 // 2. Menu Management
+
+
+
 model MenuCategory {
-  id        Int      @id @default(autoincrement())
-  name      String
-  menuType  String
-  image     String  // <--- Make sure this line exists!
-  items     MenuItem[]
+  id         Int        @id @default(autoincrement())
+  name       String
+  image      String?
+  menuItems  MenuItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model MenuItem {
-  id          Int          @id @default(autoincrement())
-  name        String       
-  description String?      
-  price       Int?         // တွက်ချက်ရလွယ်ကူစေရန် Int ပြောင်းထားပါသည် (e.g., 1180)
-  isAvailable Boolean      @default(true)
-  image         String
+  id             Int          @id @default(autoincrement())
+  name           String
+  price          Int
+  image          String?
   menuCategoryId Int
-  menuCategory   MenuCategory @relation(fields: [menuCategoryId], references: [id])
-  
+  menuCategory   MenuCategory @relation(fields: [menuCategoryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 // 3. Reservation System
@@ -69,13 +75,12 @@ model Reservation {
   specialNotes       String?
   
   status             String   @default("pending") // pending, confirmed, cancelled
-  agreedToTerms      Boolean  @default(false)
-  understoodLeadTime Boolean  @default(false) 
-  
+  agreedToTerms      Boolean @default(false)
+  understoodLeadTime Boolean @default(true) 
+  paymentScreenshot  String? 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  @@map("reservations")
 }
 
 // 4. Opening Hours
@@ -113,3 +118,4 @@ model ContactMessage {
 
   @@map("contact_messages")
 }
+

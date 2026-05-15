@@ -7,7 +7,13 @@ import fs from "fs";
 
 export const router = express.Router();
 
-// --- Multer Setup (ပုံများကို server ပေါ်သိမ်းရန်) ---
+// --- Helper: ဖိုင်လမ်းကြောင်း သတ်မှတ်ရန် ---
+const getFullPath = (dbUrl: string) => {
+  const cleanPath = dbUrl.startsWith("/") ? dbUrl.slice(1) : dbUrl;
+  return path.join(process.cwd(), cleanPath);
+};
+
+// --- Multer Storage ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/gallery/";
@@ -24,65 +30,109 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  fileFilter: (req, file, cb) => {
-    // --- Type Check: Image နှင့် Video သာ လက်ခံမည် ---
-    const fileTypes = /jpeg|jpg|png|gif|mp4|mov|webm/;
-    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = fileTypes.test(file.mimetype);
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+}).single("file"); // Route ထဲမှာ manual handle လုပ်ဖို့ single ကို ဒီမှာ ခွဲထုတ်ထားလိုက်မယ်
 
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error("ပုံ သို့မဟုတ် ဗီဒီယို ဖိုင်များသာ တင်ခွင့်ရှိပါသည်။"));
+// --- 1. Upload Route ---
+router.post("/gallery", auth, (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: "Upload Error: " + err.message });
     }
-  },
-  limits: { fileSize: 50 * 1024 * 1024 }, // Max 50MB (Video ပါနိုင်၍)
+
+    try {
+      const { title, category } = req.body;
+      if (!req.file) return res.status(400).json({ message: "ဖိုင်ရွေးချယ်ပါ" });
+
+      const isVideo = req.file.mimetype.startsWith("video");
+      const newItem = await prisma.galleryItem.create({
+        data: {
+          title: title || req.file.originalname,
+          type: isVideo ? "VIDEO" : "IMAGE",
+          url: `/uploads/gallery/${req.file.filename}`,
+          category: category || "General",
+        },
+      });
+
+      return res.status(201).json(newItem); // Response ပြန်တာ သေချာစေရမယ်
+    } catch (dbError: any) {
+      return res.status(500).json({ message: "Database Error: " + dbError.message });
+    }
+  });
 });
 
-// --- 2. Admin Route: Direct Upload လုပ်ရန် ---
-// POST /api/gallery
-// Frontend ကနေ 'file' ဆိုတဲ့ key နဲ့ ပို့ပေးရပါမယ်
-router.post("/gallery", auth, upload.single("file"), async (req, res) => {
-  try {
-    const { title, category } = req.body;
-    const file = req.file;
+// --- 2. Edit Route ---
+router.put("/gallery/:id", auth, (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: err.message });
 
-    if (!file) {
-      return res.status(400).json({ message: "ကျေးဇူးပြု၍ ဖိုင်ရွေးချယ်ပေးပါ။" });
+    try {
+      const { id } = req.params;
+      const { title, category } = req.body;
+
+      const oldItem = await prisma.galleryItem.findUnique({ where: { id: Number(id) } });
+      if (!oldItem) return res.status(404).json({ message: "ရှာမတွေ့ပါ။" });
+
+      let updateData: any = {
+        title: title || oldItem.title,
+        category: category || oldItem.category,
+      };
+
+      if (req.file) {
+        // ဖိုင်ဟောင်းဖျက်ခြင်း (Error မတက်အောင် try-catch ခံထားသင့်တယ်)
+        try {
+          const oldFilePath = getFullPath(oldItem.url);
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+        } catch (e) {
+          console.log("File deletion failed:", e);
+        }
+
+        updateData.url = `/uploads/gallery/${req.file.filename}`;
+        updateData.type = req.file.mimetype.startsWith("video") ? "VIDEO" : "IMAGE";
+      }
+
+      const updated = await prisma.galleryItem.update({
+        where: { id: Number(id) },
+        data: updateData,
+      });
+
+      return res.json(updated);
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  });
+});
+
+// --- 3. Delete Route ---
+router.delete("/gallery/:id", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await prisma.galleryItem.findUnique({ where: { id: Number(id) } });
+
+    if (!item) return res.status(404).json({ message: "ရှာမတွေ့ပါ။" });
+
+    try {
+      const filePath = getFullPath(item.url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (e) {
+      console.log("File system error:", e);
     }
 
-    // ဖိုင် extension ကို ကြည့်ပြီး Type သတ်မှတ်ခြင်း
-    const isVideo = file.mimetype.startsWith("video");
-    const fileType = isVideo ? "VIDEO" : "IMAGE";
-
-    // Database ထဲမှာ URL အစား file path ကို သိမ်းခြင်း
-    const newItem = await prisma.galleryItem.create({
-      data: {
-        title: title || file.originalname,
-        type: fileType,
-        url: `/uploads/gallery/${file.filename}`, // Browser ကနေ ပြန်ကြည့်မယ့် path
-        category: category || "General",
-      },
-    });
-
-    return res.status(201).json(newItem);
+    await prisma.galleryItem.delete({ where: { id: Number(id) } });
+    return res.json({ message: "ဖျက်ပြီးပါပြီ။" });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message || "Upload တင်ရာတွင် အမှားရှိနေပါသည်။" });
+    return res.status(500).json({ message: error.message });
   }
 });
 
-// --- Public Route: Gallery အားလုံးကိုကြည့်ရန် (အရင်အတိုင်း) ---
+// --- 4. Get All Route ---
 router.get("/gallery", async (req, res) => {
   try {
-    const { category } = req.query;
     const items = await prisma.galleryItem.findMany({
-      where: category ? { category: String(category) } : {},
       orderBy: { createdAt: "desc" },
     });
     return res.json(items);
   } catch (error) {
-    return res.status(500).json({ message: "Error fetching gallery items" });
+    return res.status(500).json({ message: "Error fetching items" });
   }
 });
-
-// ... Delete logic ကိုတော့ အရင်အတိုင်း ထားနိုင်ပါတယ် ...

@@ -4,16 +4,14 @@ import { auth } from "../middleware/auth";
 
 export const router = express.Router();
 
-// --- Public Route ---
-
-// ၁။ User က Message ပို့ရန် (Contact Form အတွက်)
-// POST /api/contacts
+// User က Message ပို့ရန် (Public Route)
+// URL: POST /api/contacts
 router.post("/contacts", async (req, res) => {
   try {
     const { userName, userEmail, subject, message } = req.body;
 
     if (!userName || !userEmail || !message) {
-      return res.status(400).json({ message: "Required fields are missing" });
+      return res.status(400).json({ message: "ဖြည့်စွက်ရန် လိုအပ်သည်များ ကျန်ရှိနေပါသည်" });
     }
 
     const newMessage = await prisma.contactMessage.create({
@@ -22,14 +20,16 @@ router.post("/contacts", async (req, res) => {
         userEmail,
         subject: subject || "No Subject",
         message,
-        isRead: false, // Default အနေနဲ့ မဖတ်ရသေးဘူးလို့ သတ်မှတ်မယ်
+        isRead: false,
       },
     });
-    return res.status(201).json(newMessage);
+    return res.status(201).json({ success: true, data: newMessage });
   } catch (error) {
     return res.status(500).json({ message: "Error sending message" });
   }
 });
+
+// Admin အတွက် ကျန်တဲ့ route တွေ (GET, PATCH, DELETE) က မူလအတိုင်းပဲ ထားနိုင်ပါတယ်
 
 // --- Admin Routes (Auth လိုအပ်သည်) ---
 
