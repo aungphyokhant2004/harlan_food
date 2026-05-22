@@ -260,6 +260,27 @@ async function seed() {
   }
 
   console.log("✅ Reservations Seeded!");
+
+ 
+  const room = await prisma.chatRoom.create({
+    data: {
+      guestName: "Kyaw Kyaw",
+      phoneNumber: "091234567",
+      email: "kyawkyaw@gmail.com",
+    }
+  });
+   console.log("room Success")
+
+
+  await prisma.message.createMany({
+    data: [
+      { roomId: room.id, senderType: "GUEST", text: "မင်္ဂလာပါ admin ခင်ဗျာ။" },
+      { roomId: room.id, senderType: "ADMIN", text: "ဟုတ်ကဲ့ပါ၊ ဘာများ ကူညီပေးရမလဲခင်ဗျာ။" }
+    ]
+  });
+
+  console.log("message success")
+
 }
 
 seed()

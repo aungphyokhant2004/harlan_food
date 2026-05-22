@@ -119,3 +119,30 @@ model ContactMessage {
   @@map("contact_messages")
 }
 
+// 🚀 prisma/schema.prisma ၏ အောက်ဆုံးတွင် ထည့်ရန်
+
+model ChatRoom {
+  id           Int       @id @default(autoincrement())
+  guestName    String    // ဧည့်သည်အမည်
+  phoneNumber  String    // ဧည့်သည် ဖုန်းနံပါတ် (ဒါကို အခြေခံပြီး Room ခွဲပါမည်)
+  email        String?   // ဧည့်သည် Email
+  messages     Message[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("chat_rooms")
+  @@index([phoneNumber])
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  roomId     Int
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderType String   // "GUEST" သို့မဟုတ် "ADMIN"
+  text       String   // မက်ဆေ့ခ်ျစာသား
+  createdAt  DateTime @default(now())
+
+  @@map("chat_messages")
+  @@index([roomId])
+}
+
